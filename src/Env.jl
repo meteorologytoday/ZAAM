@@ -1,23 +1,47 @@
+mutable struct PhyParams
+
+    J :: Float64   # momentum vertical diffusivity 
+    L :: Float64   # momentum horizontal diffusivity
+    K :: Float64   # buoyancy horizontal diffusivity
+    N :: Float64   # Stability of the atmosphere 
+    τ :: Float64
+    C :: Float64   
+
+end
+
+
 mutable struct Env
 
+
+    pp :: PhyParams
     gd :: Grid
-    f  :: Float64
-    mask_T :: AbstractArray{Float64, 1}
 
     function Env(;
-        gd :: Grid,
-        f  :: Float64, # Coriolis parameter
-        mask_T :: Union{Nothing, AbstractArray} = nothing,
+        ϕs :: Float64,
+        ϕn :: Float64,
+        npts :: Integer,
+        J :: Float64,
+        L :: Float64,
+        K :: Float64,
+        H :: Float64,
+        N :: Float64,
+        τ :: Float64,
+        C :: Float64,
     )
 
-        if mask_T == nothing
-            mask_T = ones(Float64, length(gd.z_T))
-        end
+        pp = PhyParams(J, L, K, N, τ, C,)
+
+        gd = Grid(
+            Ny=npts,
+            Ω=Ω,
+            ϕn = ϕn,
+            ϕs = ϕs,
+            H = H,
+            R = R,
+        )
 
         return new(
-            gd,
-            f,
-            mask_T,
+            pp, gd,
         )
         
     end

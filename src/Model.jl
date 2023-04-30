@@ -4,7 +4,7 @@ mutable struct Model
     ev :: Env
     st :: State
     co :: Core
-    fo :: Forcing
+#    fo :: Forcing
 
     function Model(
         ev :: Env,
@@ -12,15 +12,13 @@ mutable struct Model
 
         st = State(ev)
         co = Core(ev)
-        fo = Forcing()
-
-
+#        fo = Forcing()
 
         return new(
             ev,
             st,
             co,
-            fo,
+#            fo,
         )
     end 
 

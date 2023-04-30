@@ -1,39 +1,22 @@
 mutable struct State
 
-    T  :: AbstractArray{Float64, 1}
-    S  :: AbstractArray{Float64, 1}
-    b  :: AbstractArray{Float64, 1}
-    u  :: AbstractArray{Float64, 1}
-    v  :: AbstractArray{Float64, 1}
-    Ri :: AbstractArray{Float64, 1}
-    h   :: Float64
-    h_k :: Integer
+    B   :: AbstractArray{Float64, 1}
+    Γ   :: AbstractArray{Float64, 1}
+    SST :: AbstractArray{Float64, 1}
 
     function State(
         ev :: Env,
     )
-        Nz = ev.gd.Nz
+        Ny = ev.gd.Ny
  
-        T   = zeros( Float64, Nz ) 
-        S   = zeros( Float64, Nz ) 
-        b   = zeros( Float64, Nz ) 
-        Ri  = zeros( Float64, Nz ) 
-        u   = zeros( Float64, Nz ) 
-        v   = zeros( Float64, Nz ) 
-    
-
-        h_k = 1
-        h   = ev.gd.z_W[h_k + 1]
+        B   = zeros( Float64, Ny ) 
+        Γ   = zeros( Float64, Ny ) 
+        SST = zeros( Float64, Ny ) 
 
         return new(
-            T,
-            S,
-            b,
-            u,
-            v,
-            Ri,
-            h,
-            h_k,
+            B,
+            Γ,
+            SST,
         )    
     end
 end

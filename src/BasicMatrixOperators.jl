@@ -5,7 +5,7 @@ using SparseArrays
 end
 
 # Assuming x-direction is periodic
-struct MatrixOperators
+struct BasicMatrixOperators
 
     Nz
     Ny
@@ -43,21 +43,6 @@ struct MatrixOperators
     T_N_T
     T_S_T
 
-    # === [ Begin mirror operator ] ===
-    
-    V_mS_T
-    V_mN_T
-
-    # These two operators are the same as T_S_V and T_N_V
-    # T_mS_V
-    # T_mN_V
-   
-    T_mN_T
-    T_mS_T
-    
-    # === [ End mirror operator ] ===
-
-
     T_UP_T
     T_DN_T
  
@@ -87,18 +72,18 @@ struct MatrixOperators
     T_E_T
     T_W_T
     
-    function MatrixOperators(;
+    function BasicMatrixOperators(;
         Ny             :: Int64,
         Nz             :: Int64,
         Nx             :: Int64,
     )
         
         # Making operator
-        T_dim  =  (Nz,   Ny   , Nx)
-        V_dim  =  (Nz,   Ny+1 , Nx)
-        W_dim  =  (Nz+1, Ny   , Nx)
-        VW_dim =  (Nz+1, Ny+1 , Nx)
-        U_dim  =  (Nz,   Ny   , Nx+1)
+        T_dim  =  (Nx,   Ny   , Nz)
+        V_dim  =  (Nx,   Ny+1 , Nz)
+        W_dim  =  (Nx,   Ny   , Nz+1)
+        VW_dim =  (Nx,   Ny+1 , Nz+1)
+        U_dim  =  (Nx+1, Ny   , Nz)
 
         T_pts  = reduce(*, T_dim)
         V_pts  = reduce(*, V_dim)
@@ -147,13 +132,13 @@ struct MatrixOperators
             elseif wipe == :s
                 idx[:, 1,   :] .= rows
             elseif wipe == :t
-                idx[1, :,   :] .= rows
+                idx[:, :,   1] .= rows
             elseif wipe == :b
-                idx[end, :, :] .= rows
-            elseif wipe == :e
                 idx[:, :, end] .= rows
+            elseif wipe == :e
+                idx[end, :, :] .= rows
             elseif wipe == :w
-                idx[:, :, 1  ] .= rows
+                idx[1,   :, :] .= rows
             elseif wipe != :none
                 throw(ErrorException("Wrong keyword"))
             end
@@ -181,44 +166,6 @@ struct MatrixOperators
         T_N_T = T_N_V * V_N_T
         T_S_T = T_S_V * V_S_T
 
-        # "mirror" north and south passing mtx
-        if Nx == 2
-            
-            println("Mirror Condition: East and west boundaries share the same northern and southern edge.")
-
-            V[:, 1:Ny, :]    = num_T
-            V[:, Ny+1, 1]    = num_T[:, Ny, 2]
-            V[:, Ny+1, 2]    = num_T[:, Ny, 1]
-            V_mS_T  = build!(T_I_T_expand, V; wipe=:none)
-
-
-            V[:, 2:Ny+1, :]  = num_T
-            V[:, 1, 1] = num_T[:,  1, 2]
-            V[:, 1, 2] = num_T[:,  1, 1]
-            V_mN_T  = build!(T_I_T_expand, V; wipe=:none)
-
-            # T to T operators
-            T_mN_T = T_N_V * V_mN_T
-            T_mS_T = T_S_V * V_mS_T
-
-        else
-
-            V_mS_T = copy(V_S_T)
-            V_mN_T = copy(V_N_T)
-            T_mS_T = copy(T_S_T)
-            T_mN_T = copy(T_N_T)
-
-        end
-
-
-        # VW grid north and south
-
-        #VW[:, 1:Ny, :]   = num_W;                VW_S_W = build!(W_I_W_expand, VW; wipe=:n)
-        #VW[:, 2:Ny+1, :] = num_W;                VW_N_W = build!(W_I_W_expand, VW; wipe=:s)
-
-        #W_N_VW = VW_S_W' |> sparse
-        #W_S_VW = VW_N_W' |> sparse
-        
         W[:, :, :] = num_VW[:, 2:Ny+1, :];    W_S_VW = build!(VW_I_VW_expand, W; wipe=:none)
         W[:, :, :] = num_VW[:, 1:Ny, :];      W_N_VW = build!(VW_I_VW_expand, W; wipe=:none)
 
@@ -226,14 +173,14 @@ struct MatrixOperators
         VW_S_W = W_N_VW' |> sparse
 
         # upward, downward passing mtx
-        T[1:Nz-1, :, :] = view(num_T, 2:Nz, :, :);    T_UP_T = build!(T_I_T_expand, T; wipe=:b)
-        T[2:Nz, :, :] = view(num_T, 1:Nz-1, :, :);    T_DN_T = build!(T_I_T_expand, T; wipe=:t)
+        T[:, :, 1:Nz-1] = view(num_T, :, :, 2:Nz);    T_UP_T = build!(T_I_T_expand, T; wipe=:b)
+        T[:, :, 2:Nz  ] = view(num_T, :, :, 1:Nz-1);  T_DN_T = build!(T_I_T_expand, T; wipe=:t)
 
-        T[:, :, :] = view(num_W, 2:Nz+1, :, :);       T_UP_W = build!(W_I_W_expand, T)
-        T[:, :, :] = view(num_W, 1:Nz, :, :);         T_DN_W = build!(W_I_W_expand, T)
+        T[:, :, :] = view(num_W, :, :, 2:Nz+1);       T_UP_W = build!(W_I_W_expand, T)
+        T[:, :, :] = view(num_W, :, :, 1:Nz);         T_DN_W = build!(W_I_W_expand, T)
 
-        V[:, :, :] = view(num_VW, 2:Nz+1, :, :);      V_UP_VW = build!(VW_I_VW_expand, V)
-        V[:, :, :] = view(num_VW, 1:Nz  , :, :);      V_DN_VW = build!(VW_I_VW_expand, V)
+        V[:, :, :] = view(num_VW, :, :, 2:Nz+1);      V_UP_VW = build!(VW_I_VW_expand, V)
+        V[:, :, :] = view(num_VW, :, :, 1:Nz  );      V_DN_VW = build!(VW_I_VW_expand, V)
 
         # inverse directions
         W_DN_T = T_UP_W' |> sparse
@@ -243,11 +190,11 @@ struct MatrixOperators
         VW_DN_V = V_UP_VW' |> sparse
 
         # east west passing mtx
-        U[:, :, 1:Nx] = num_T;       U_W_T = build!(T_I_T_expand, U; wipe=:e)
-        U[:, :, 2:Nx+1] = num_T;       U_E_T = build!(T_I_T_expand, U; wipe=:w)
+        U[1:Nx,   :, :] = num_T;       U_W_T = build!(T_I_T_expand, U; wipe=:e)
+        U[2:Nx+1, :, :] = num_T;       U_E_T = build!(T_I_T_expand, U; wipe=:w)
 
-        T[:, :, :] = num_U[:, :, 2:Nx+1];       T_W_U = build!(U_I_U_expand, T)
-        T[:, :, :] = num_U[:, :, 1:Nx  ];       T_E_U = build!(U_I_U_expand, T)
+        T[:, :, :] = num_U[2:Nx+1, :, :];       T_W_U = build!(U_I_U_expand, T)
+        T[:, :, :] = num_U[1:Nx,   :, :];       T_E_U = build!(U_I_U_expand, T)
 
 
         U_W_U = U_W_T * T_W_U
@@ -289,12 +236,6 @@ struct MatrixOperators
            
             T_N_T,
             T_S_T,
-
-            V_mS_T,
-            V_mN_T,
-           
-            T_mN_T,
-            T_mS_T,
 
             T_UP_T,
             T_DN_T,

@@ -1,18 +1,19 @@
 mutable struct Core
 
-#    amo :: AdvancedMatrixOperators
-#    rad :: Radiation
+    amo :: AdvancedMatrixOperators
+    ops :: Dict
 
     function Core(
         ev :: Env,
     )
 
-#        amo = AdvancedMatrixOperators(gd=ev.gd, mask_T=ev.mask_T)
-#        rad = Radiation(amo=amo)
-
+        amo = AdvancedMatrixOperators(gd=ev.gd)
+        ops = Dict(
+            :ydiff => amo.T_DIVy_V * ev.pp.L * amo.V_∂y_T,
+        )
         return new(
-#            amo,
-#            rad,
+            amo,
+            ops,
         )    
     end
 end

@@ -24,6 +24,7 @@ mutable struct AdvancedMatrixOperators
     T_∂z_W      :: AbstractArray{Float64, 2}
     V_∂z_VW     :: AbstractArray{Float64, 2}
     
+    V_LAPy_V      :: AbstractArray{Float64, 2}
     T_LAPy_T      :: AbstractArray{Float64, 2}
     W_LAPz_W      :: AbstractArray{Float64, 2}
     VW_LAPz_VW    :: AbstractArray{Float64, 2}
@@ -277,6 +278,8 @@ mutable struct AdvancedMatrixOperators
         V_∂z_VW = V_mask_V * V_invΔz_V * ( bmo.V_DN_VW - bmo.V_UP_VW )          ; dropzeros!(V_∂z_VW);
         
 
+        V_LAPy_V   =  V_DIVy_T * T_∂y_V
+
         T_LAPy_T   =  T_DIVy_V * V_∂y_T
         W_LAPz_W   =  W_DIVz_T * T_∂z_W
         VW_LAPz_VW = VW_DIVz_V * V_∂z_VW
@@ -311,7 +314,8 @@ mutable struct AdvancedMatrixOperators
             T_∂y_V,
             T_∂z_W,
             V_∂z_VW,
-            
+
+            V_LAPy_V,
             T_LAPy_T,
             W_LAPz_W,
             VW_LAPz_VW,

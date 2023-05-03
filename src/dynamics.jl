@@ -125,7 +125,7 @@ function getF_AOMatrix(
     # F_ao
     A  = - factor * pp.C * θ0 / g0 * sparse(I, Npts, Npts)
     F = factor * ( st.SST .- θ0 * ( 1 - pp.N * gd.H / (2 * g0)) ) * pp.C 
-    println(Matrix(A))
+    #println(Matrix(A))
     jacobian_A = A
     jacobian_F = 0 * A
 

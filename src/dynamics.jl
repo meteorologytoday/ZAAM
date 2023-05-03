@@ -6,15 +6,17 @@ function step!(
     st = m.st
 
     B = st.B
-    
 
+    diagΨ!(m)    
+
+    A_DIVΨ, F_DIVΨ   = getHeatTransportMatrix(m)
     A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
     A_F_AO,  F_F_AO  = getF_AOMatrix(m)
     A_YDiff, F_YDiff = getYDiffMatrix(m)
 
 
-    A = A_F_TOA + A_F_AO + A_YDiff
-    F = F_F_TOA + F_F_AO + F_YDiff
+    A = A_F_TOA + A_F_AO + A_YDiff + A_DIVΨ
+    F = F_F_TOA + F_F_AO + F_YDiff + F_DIVΨ
 
     #A = A_F_AO# + A_YDiff
     #F = F_F_AO# + F_YDiff
@@ -23,6 +25,35 @@ function step!(
 
     B[:] = ( I - dt * A ) \ ( B + dt * F )
     
+end
+
+function diagΨ!(
+    m :: Model,
+)
+
+    m.st.Γ[:] = m.co.ops[:V_solveΓ_T] * m.st.B
+    m.st.Ψ[:] = m.co.ops[:V_solveΨ_T] * m.st.B
+
+end
+
+function getHeatTransportMatrix(
+    m :: Model,
+    return_jacobian :: Bool = false
+)
+    
+    A = - m.ev.pp.N * m.co.amo.T_DIVy_V * m.co.ops[:V_solveΨ_T]
+    F = m.st.B * 0
+
+    jacobian = A
+    if return_jacobian
+
+        return A, F, jacobian
+    else
+
+        return A, F
+
+    end
+
 end
 
 

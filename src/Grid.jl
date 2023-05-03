@@ -106,6 +106,9 @@ struct Grid
         Δλ_W   = x_makeMesh(Δλ, Ny,   Nz+1)
         Δλ_VW  = x_makeMesh(Δλ, Ny+1, Nz+1)
 
+        # Uncomment the following line to remove curvature effect
+        #cos(x) = 1.0
+
         # Calculating horizontal grid edges
         Δx_T = R * cos.(ϕ_T) .* Δλ_T;
         Δy_T = R * Δϕ_T;

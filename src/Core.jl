@@ -13,7 +13,8 @@ mutable struct Core
 
         ops = Dict(
             :ydiff    => amo.T_DIVy_V * ev.pp.L * amo.V_∂y_T,
-            :V_solve_T => psi_solver.V_solve_T,
+            :V_solveΨ_T => psi_solver.V_solveΨ_T,
+            :V_solveΓ_T => psi_solver.V_solveΓ_T,
         )
 
         return new(

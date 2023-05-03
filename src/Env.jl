@@ -4,8 +4,8 @@ mutable struct PhyParams
     L :: Float64   # momentum horizontal diffusivity
     K :: Float64   # buoyancy horizontal diffusivity
     N :: Float64   # Stability of the atmosphere 
-    τ :: Float64
     C :: Float64   
+    k :: Float64   
 
 end
 
@@ -25,11 +25,10 @@ mutable struct Env
         K :: Float64,
         H :: Float64,
         N :: Float64,
-        τ :: Float64,
         C :: Float64,
     )
 
-        pp = PhyParams(J, L, K, N, τ, C,)
+        pp = PhyParams(J, L, K, N, C, π/H)
 
         gd = Grid(
             Ny=npts,

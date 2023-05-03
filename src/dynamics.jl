@@ -7,32 +7,59 @@ function step!(
 
     B = st.B
     
-    A = getA(m)
-    F = getF(m)
 
-    B[:] = ( I - dt * A ) \ ( B + F )
+    A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
+    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
+    A_YDiff, F_YDiff = getYDiffMatrix(m)
+
+
+    A = A_F_TOA + A_F_AO + A_YDiff
+    F = F_F_TOA + F_F_AO + F_YDiff
+
+    #A = A_F_AO# + A_YDiff
+    #F = F_F_AO# + F_YDiff
+
+
+
+    B[:] = ( I - dt * A ) \ ( B + dt * F )
     
 end
 
 
-function getA(
+function getYDiffMatrix(
     m :: Model,
+    return_jacobian :: Bool = false
 )
 
-    return m.co.ops[:ydiff]
+    A = m.co.ops[:ydiff]
+    F = m.st.B * 0
 
+    jacobian = m.co.ops[:ydiff]
+
+
+    if return_jacobian
+
+        return A, F, jacobian
+    else
+
+        return A, F
+
+    end
 
 end
 
-function getF(
+function computeTS(
     m :: Model,
+    B :: AbstractArray,
 )
 
-    return m.st.B * 0
+    pp = m.ev.pp
+    gd = m.ev.gd
 
+
+    return θ0 * (1 .+ (B .- (pp.N * gd.H) / 2) / g0)
 
 end
-
 
 
 
@@ -43,6 +70,7 @@ function computeT_TOA(
 
     pp = m.ev.pp
     gd = m.ev.gd
+
 
     return θ0 * (1 .+ (B .+ (pp.N * gd.H) / 2) / g0)
 
@@ -60,18 +88,20 @@ function getF_TOAMatrix(
 
     Npts = gd.Ny
 
-    # F_TOA
+    factor = g0 / ( θ0 * c_p * ρ0 * gd.H ) * (gd.H * pp.k / 2) 
 
     T_TOA = computeT_TOA(m, m.st.B)
     tmp = σ_boltz * T_TOA.^3
-    A  = spdiagm(0 => (- tmp * θ0 / g0))
-    F = tmp * (θ0 + pp.N * gd.H / (2 * g0))
+    A   = spdiagm(0 => (- factor * tmp * θ0 / g0))
+    F   = - factor * tmp * ( θ0 * ( 1 + pp.N * gd.H / (2 * g0)) )  
 
     jacobian_A = A
+    jacobian_F = factor * spdiagm( 0 => - 3 * σ_boltz * T_TOA.^2 * ( θ0 * ( 1 + pp.N * gd.H / (2 * g0) ) ) * (θ0/g0) )
+
 
     if return_jacobian
         
-        return A, F, jacobian_A
+        return A, F, jacobian_A + jacobian_F
         
     else
         return A, F
@@ -86,21 +116,26 @@ function getF_AOMatrix(
     ev = m.ev
     pp = ev.pp
     gd = ev.gd
+    st = m.st
 
     Npts = gd.Ny
+    
+    factor = g0 / ( θ0 * c_p * ρ0 * gd.H ) * (gd.H * pp.k / 2) 
 
     # F_ao
-
-    A  = - pp.C / pp.τ * θ0 / g0 * sparse(I, Npts, Npts)
-    F = zeros(Float64, Npts) .+ ( T_ocn - θ0 * ( 1 - N * H / (2 * g0)) ) * pp.C / pp.τ
-   
+    A  = - factor * pp.C * θ0 / g0 * sparse(I, Npts, Npts)
+    F = factor * ( st.SST .- θ0 * ( 1 - pp.N * gd.H / (2 * g0)) ) * pp.C 
+    println(Matrix(A))
     jacobian_A = A
+    jacobian_F = 0 * A
+
 
     if return_jacobian
         
-        return A, F, jacobian_A
+        return A, F, jacobian_A + jacobian_F
         
     else
         return A, F
     end
+    
 end

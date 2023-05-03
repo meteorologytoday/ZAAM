@@ -1,7 +1,6 @@
-mutable struct EllipticSolver
+mutable struct StreamfunctionSolver
 
     sop2         :: MatrixSpatialOperators
-    sop3         :: MatrixSpatialOperators
 
     eW_length    :: Int64
     eVW_length   :: Int64
@@ -23,10 +22,8 @@ mutable struct EllipticSolver
     wksp_Ψ_star
 
     function EllipticSolver(
-        gd2   :: Grid,
-        sop2  :: MatrixSpatialOperators,
-        sop3  :: MatrixSpatialOperators,
-        μ     :: Float64,
+        gd   :: Grid,
+        sop  :: AdvancedMatrixOperators,
     )
         cvtDiagOp = (a,) -> spdiagm(0 => view(a, :))
         

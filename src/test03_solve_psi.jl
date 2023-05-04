@@ -45,7 +45,7 @@ for n=1:N
     Γ[:, n] = Pn
     ∂B∂y[:, n] = - f_V.^(-1) .* ( (f_V.^2 .+ pp.J^2 * pp.k^4) .+ n*(1+n)*pp.J*pp.L*pp.k^2/gd.R^2 ) .* Pn 
     
-    num_Ψ[:, n] = m.co.psi_solver.V_solve_V * ∂B∂y[:, n]
+    num_Ψ[:, n] = m.co.psi_solver.V_solveΨ_from∂B∂y_V * ∂B∂y[:, n]
     ana_Ψ[:, n] = - (pp.J * pp.k^4)^(-1) * ( ∂B∂y[:, n] + f_V .* Γ[:, n] )
 
 end

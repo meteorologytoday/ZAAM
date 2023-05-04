@@ -31,8 +31,9 @@ function diagΨ!(
     m :: Model,
 )
 
-    m.st.Γ[:] = m.co.ops[:V_solveΓ_T] * m.st.B
-    m.st.Ψ[:] = m.co.ops[:V_solveΨ_T] * m.st.B
+    psi_solver = m.co.psi_solver
+    m.st.Γ[:] = psi_solver.T_solveΓ_fromB_T * m.st.B
+    m.st.Ψ[:] = psi_solver.V_solveΨ_fromB_T * m.st.B
 
 end
 
@@ -41,7 +42,7 @@ function getHeatTransportMatrix(
     return_jacobian :: Bool = false
 )
     
-    A = - m.ev.pp.N * m.co.amo.T_DIVy_V * m.co.ops[:V_solveΨ_T]
+    A = - m.ev.pp.N * m.co.amo.T_DIVy_V * m.co.psi_solver.V_solveΨ_fromB_T
     F = m.st.B * 0
 
     jacobian = A

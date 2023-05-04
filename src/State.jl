@@ -11,7 +11,7 @@ mutable struct State
         Ny = ev.gd.Ny
  
         B   = zeros( Float64, Ny ) 
-        Γ   = zeros( Float64, Ny+1) 
+        Γ   = zeros( Float64, Ny) 
         Ψ   = zeros( Float64, Ny+1) 
         SST = zeros( Float64, Ny ) 
 

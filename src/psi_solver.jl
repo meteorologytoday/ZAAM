@@ -5,11 +5,11 @@ mutable struct StreamfunctionSolver
     eW_send_W    :: AbstractArray{Float64, 2}
     W_send_eW    :: AbstractArray{Float64, 2}
 
-    V_solveΨ_V    :: AbstractArray{Float64, 2}
-    V_solveΨ_T    :: AbstractArray{Float64, 2}
+    V_solveΨ_fromB_T    :: AbstractArray{Float64, 2}
+    V_solveΨ_from∂B∂y_V :: AbstractArray{Float64, 2}
  
-    V_solveΓ_V    :: AbstractArray{Float64, 2}
-    V_solveΓ_T    :: AbstractArray{Float64, 2}
+    T_solveΓ_fromB_T    :: AbstractArray{Float64, 2}
+    T_solveΓ_from∂B∂y_V :: AbstractArray{Float64, 2}
     
     function StreamfunctionSolver(;
         pp :: PhyParams,
@@ -31,35 +31,38 @@ mutable struct StreamfunctionSolver
         V_send_eV = sparse(eV_send_V')
  
         # construct operators on the left-hand-side
-        eV_LAPy_eV = sparse(eV_send_V   * amo.V_LAPy_V   * V_send_eV)
-
-        eV_L_eV = sparse(eV_send_V * ( 
-            pp.J * pp.L * pp.k^2 * amo.V_LAPy_V - ( amo.V_f_V * amo.V_f_V .+ pp.J^2 * pp.k^4 )
-        ) * V_send_eV)
-
-        eV_invL_eV = inv(Matrix(eV_L_eV))
+        T_WgtLAPy_T = sparse(amo.T_DIVy_V * spdiagm(0=>pp.L) * amo.V_∂y_T )
+        T_L_T = sparse(
+            pp.J * pp.k^2 * T_WgtLAPy_T - ( amo.T_f_T * amo.T_f_T .+ pp.J^2 * pp.k^4 )
+        )
         
-        V_solveΨ_V = - (pp.J * pp.k^4)^(-1) * (bmo.V_I_V + amo.V_f_V * V_send_eV * eV_invL_eV * eV_send_V * amo.V_f_V )
-        V_solveΨ_T = V_solveΨ_V * amo.V_∂y_T
+        T_invL_T = inv(Matrix(T_L_T))
         
+        T_solveΓ_fromB_T    = sparse( T_invL_T * amo.T_interp_V * amo.V_f_V * amo.V_∂y_T )
+        T_solveΓ_from∂B∂y_V = sparse( T_invL_T * amo.T_interp_V * amo.V_f_V )
 
-        V_solveΓ_V = V_send_eV * eV_invL_eV * eV_send_V * amo.V_f_V
-        V_solveΓ_T = V_solveΓ_V * amo.V_∂y_T
+        V_solveΨ_fromB_T = - amo.V_mask_V * (pp.J * pp.k^4)^(-1) * (
+              amo.V_∂y_T
+            + amo.V_interp_T * amo.T_f_T * T_solveΓ_fromB_T
+        )
 
 
-
+        V_solveΨ_from∂B∂y_V = - amo.V_mask_V * (pp.J * pp.k^4)^(-1) * (
+              amo.bmo.V_I_V
+            + amo.V_interp_T * amo.T_f_T * T_solveΓ_from∂B∂y_V
+        )
+        
         return new(
             amo,
 
             eV_send_V,
             V_send_eV,
 
-            V_solveΨ_V,  # starting from dBdy, for testing
-            V_solveΨ_T,
+            V_solveΨ_fromB_T,
+            V_solveΨ_from∂B∂y_V,
 
-            V_solveΓ_V,  # starting from dBdy, for testing
-            V_solveΓ_T,
-
+            T_solveΓ_fromB_T,
+            T_solveΓ_from∂B∂y_V,
         ) 
 
     end

@@ -4,28 +4,69 @@ function step!(
 )
 
     st = m.st
-
-    B = st.B
-
+    
     diagΨ!(m)    
+ 
+    A_Γ, F_Γ = getΓMatrix(m)
+    A_B, F_B = getBMatrix(m)
+    
+    A = spdiagm(A_Γ, A_B)
+    F = vcat(F_Γ, F_B)    
+    
+    
+    _X = st._X
+    _X[:] = ( I - dt * A ) \ ( _X + dt * F )
+    
+end
 
+
+
+function getΓMatrix(
+    m :: Model,
+    return_jacobian :: Bool = false,
+)
+    
+    # For wind shear
+    A_Γ_DIVΨ, F_Γ_DIVΨ = Γ_getTransportMatrix(m)
+
+    A_Γ_F_TOA, F_F_TOA = getF_TOAMatrix(m)
+    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
+    A_YDiff, F_YDiff = getYDiffMatrix(m)
+    
     A_DIVΨ, F_DIVΨ   = getHeatTransportMatrix(m)
     A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
     A_F_AO,  F_F_AO  = getF_AOMatrix(m)
     A_YDiff, F_YDiff = getYDiffMatrix(m)
-
-
+    
+    
     A = A_F_TOA + A_F_AO + A_YDiff + A_DIVΨ
     F = F_F_TOA + F_F_AO + F_YDiff + F_DIVΨ
-
-    #A = A_F_AO# + A_YDiff
-    #F = F_F_AO# + F_YDiff
-
-
-
-    B[:] = ( I - dt * A ) \ ( B + dt * F )
+    
     
 end
+
+
+
+function getBMatrix(
+    m :: Model,
+    return_jacobian :: Bool = false,
+)
+    
+    A_DIVΨ,  F_DIVΨ  = getHeatTransportMatrix(m)
+    A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
+    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
+    A_YDiff, F_YDiff = getYDiffMatrix(m)
+    
+    
+    A = A_F_TOA + A_F_AO + A_YDiff + A_DIVΨ
+    F = F_F_TOA + F_F_AO + F_YDiff + F_DIVΨ
+    
+    return A, F
+    
+end
+
+
+
 
 function diagΨ!(
     m :: Model,

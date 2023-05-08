@@ -1,7 +1,11 @@
 mutable struct State
 
-    B   :: AbstractArray{Float64, 1}
+    X    :: AbstractArray{Float64, 2}
+    _X   :: AbstractArray{Float64, 1}
+
     Γ   :: AbstractArray{Float64, 1}
+    B   :: AbstractArray{Float64, 1}
+
     Ψ   :: AbstractArray{Float64, 1}
     SST :: AbstractArray{Float64, 1}
 
@@ -10,16 +14,26 @@ mutable struct State
     )
         Ny = ev.gd.Ny
  
-        B   = zeros( Float64, Ny ) 
-        Γ   = zeros( Float64, Ny) 
+        X   = zeros( Float64, Ny, 2)
+        _X  = view(X, :)
+        
+        Γ   = view(X, :, 1)
+        B   = view(X, :, 2)
+
         Ψ   = zeros( Float64, Ny+1) 
         SST = zeros( Float64, Ny ) 
 
         return new(
-            B,
+
+            X,
+            _X,
+
             Γ,
+            B,
+
             Ψ,
             SST,
+
         )    
     end
 end

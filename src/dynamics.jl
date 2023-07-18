@@ -5,18 +5,22 @@ function step!(
 
     st = m.st
     
-    diagΨ!(m)    
+
  
     A_Γ, F_Γ = getΓMatrix(m)
     A_B, F_B = getBMatrix(m)
     
-    A = spdiagm(A_Γ, A_B)
-    F = vcat(F_Γ, F_B)    
-    
+    A = A_Γ + A_B
+    F = F_Γ + F_B    
+   
+#    print(Matrix(A))
+     
     
     _X = st._X
     _X[:] = ( I - dt * A ) \ ( _X + dt * F )
     
+    diagΨ!(m)
+
 end
 
 
@@ -25,23 +29,38 @@ function getΓMatrix(
     m :: Model,
     return_jacobian :: Bool = false,
 )
+    pp = m.ev.pp
+    amo = m.co.amo
+    zero_vec = zeros(Float64, m.ev.gd.Ny)
+    zero_mtx = spdiagm( 0 => zero_vec )
     
-    # For wind shear
-    A_Γ_DIVΨ, F_Γ_DIVΨ = Γ_getTransportMatrix(m)
+    Jk2 = pp.J * pp.k^2
 
-    A_Γ_F_TOA, F_F_TOA = getF_TOAMatrix(m)
-    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
-    A_YDiff, F_YDiff = getYDiffMatrix(m)
+    A_YDiff = blockdiag(m.co.ops[:ydiff], zero_mtx)
+    F_YDiff = vcat(zero_vec, zero_vec)
+
+    A_linear = blockdiag(
+        - Jk2 * (1 .+ amo.T_f_T * amo.T_f_T / Jk2^2),
+        zero_mtx,
+    )
+ 
+    F_linear = vcat(zero_vec, zero_vec)
     
-    A_DIVΨ, F_DIVΨ   = getHeatTransportMatrix(m)
-    A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
-    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
-    A_YDiff, F_YDiff = getYDiffMatrix(m)
+    A_baroclinic = sparse(
+        [ 
+            zero_mtx   amo.T_interp_V * (- amo.V_f_V / Jk2) * amo.V_∂y_T ;
+            zero_mtx   zero_mtx  ;
+        ]
+    )
+        
+    #print(Matrix(amo.T_interp_V * (amo.V_f_V / Jk2) * amo.V_∂y_T))
+
+    F_baroclinic = vcat(zero_vec, zero_vec)
     
-    
-    A = A_F_TOA + A_F_AO + A_YDiff + A_DIVΨ
-    F = F_F_TOA + F_F_AO + F_YDiff + F_DIVΨ
-    
+    A = A_YDiff + A_linear + A_baroclinic
+    F = F_YDiff + F_linear + F_baroclinic
+   
+    return A, F 
     
 end
 
@@ -52,11 +71,25 @@ function getBMatrix(
     return_jacobian :: Bool = false,
 )
     
-    A_DIVΨ,  F_DIVΨ  = getHeatTransportMatrix(m)
-    A_F_TOA, F_F_TOA = getF_TOAMatrix(m)
-    A_F_AO,  F_F_AO  = getF_AOMatrix(m)
-    A_YDiff, F_YDiff = getYDiffMatrix(m)
+    Ny = m.ev.gd.Ny
+    zero_vec = zeros(Float64, Ny)
+    zero_mtx = spdiagm( 0 => zero_vec )
+
+    A_DIVΨ = - m.ev.pp.N * sparse( vcat( spzeros(Ny, 2*Ny), m.co.amo.T_DIVy_V * m.co.ops[:M_Ψ]) )
+    F_DIVΨ = vcat(zero_vec, zero_vec)
+   
+    A_F_TOA, F_F_TOA = B_getF_TOAMatrix(m)
+    A_F_AO,  F_F_AO  = B_getF_AOMatrix(m)
     
+    A_YDiff = blockdiag(zero_mtx, m.co.ops[:ydiff])
+    F_YDiff = vcat(zero_vec, zero_vec)
+  
+    A_F_TOA = blockdiag(zero_mtx, A_F_TOA) 
+    A_F_AO  = blockdiag(zero_mtx, A_F_AO)
+
+    F_F_TOA = vcat(zero_vec, F_F_TOA)
+    F_F_AO  = vcat(zero_vec, F_F_AO)
+ 
     
     A = A_F_TOA + A_F_AO + A_YDiff + A_DIVΨ
     F = F_F_TOA + F_F_AO + F_YDiff + F_DIVΨ
@@ -72,34 +105,15 @@ function diagΨ!(
     m :: Model,
 )
 
-    psi_solver = m.co.psi_solver
-    m.st.Γ[:] = psi_solver.T_solveΓ_fromB_T * m.st.B
-    m.st.Ψ[:] = psi_solver.V_solveΨ_fromB_T * m.st.B
-
-end
-
-function getHeatTransportMatrix(
-    m :: Model,
-    return_jacobian :: Bool = false
-)
-    
-    A = - m.ev.pp.N * m.co.amo.T_DIVy_V * m.co.psi_solver.V_solveΨ_fromB_T
-    F = m.st.B * 0
-
-    jacobian = A
-    if return_jacobian
-
-        return A, F, jacobian
-    else
-
-        return A, F
-
-    end
+    m.st.Ψ[:] = m.co.ops[:M_Ψ] * m.st._X
+    m.st.Ψ_wgt[:] = m.co.amo.V_Δx_V * m.st.Ψ
 
 end
 
 
-function getYDiffMatrix(
+# 
+
+function B_getYDiffMatrix(
     m :: Model,
     return_jacobian :: Bool = false
 )
@@ -150,7 +164,7 @@ function computeT_TOA(
 end
 
 
-function getF_TOAMatrix(
+function B_getF_TOAMatrix(
     m :: Model,
     return_jacobian :: Bool = false
 )
@@ -181,7 +195,7 @@ function getF_TOAMatrix(
     end
 end
 
-function getF_AOMatrix(
+function B_getF_AOMatrix(
     m :: Model,
     return_jacobian :: Bool = false
 )

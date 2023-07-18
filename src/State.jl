@@ -8,6 +8,8 @@ mutable struct State
 
     Ψ   :: AbstractArray{Float64, 1}
     SST :: AbstractArray{Float64, 1}
+    
+    Ψ_wgt :: AbstractArray{Float64, 1}
 
     function State(
         ev :: Env,
@@ -22,6 +24,8 @@ mutable struct State
 
         Ψ   = zeros( Float64, Ny+1) 
         SST = zeros( Float64, Ny ) 
+        
+        Ψ_wgt = zeros( Float64, Ny+1) 
 
         return new(
 
@@ -33,6 +37,8 @@ mutable struct State
 
             Ψ,
             SST,
+            
+            Ψ_wgt,
 
         )    
     end

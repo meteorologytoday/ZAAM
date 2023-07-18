@@ -55,6 +55,7 @@ mutable struct AdvancedMatrixOperators
     T_bordermask_T :: AbstractArray{Float64, 2}
 
     T_Δx_T :: AbstractArray{Float64, 2}
+    V_Δx_V :: AbstractArray{Float64, 2}
 
     T_invΔx_T :: AbstractArray{Float64, 2}
     V_invΔx_V :: AbstractArray{Float64, 2}
@@ -173,6 +174,7 @@ mutable struct AdvancedMatrixOperators
         VW_invΔv_VW  = (Δv_VW.^(-1))  |> cvtDiagOp
        
         T_Δx_T = ( Δx_T ) |> cvtDiagOp
+        V_Δx_V = ( Δx_V ) |> cvtDiagOp
 
         T_invΔx_T = ( Δx_T.^(-1) ) |> cvtDiagOp
         T_invΔy_T = ( Δy_T.^(-1) ) |> cvtDiagOp
@@ -344,6 +346,7 @@ mutable struct AdvancedMatrixOperators
             T_bordermask_T,
 
             T_Δx_T,
+            V_Δx_V,
 
             T_invΔx_T,
             V_invΔx_V,
